@@ -35,9 +35,9 @@
     "buffer": "^5.2.1"
   },
   "files": [
-    "/src",
-    "/android",
-    "/ios",
+    "src",
+    "android",
+    "ios",
     "RNBluetoothClassic.podspec"
   ],
   "devDependencies": {
