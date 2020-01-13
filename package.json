@@ -38,7 +38,7 @@
     "src",
     "android",
     "ios",
-    "RNBluetoothClassic.podspec"
+    "react-native-bluetooth-classic.podspec"
   ],
   "devDependencies": {
     "npm-version": "^1.1.0"
