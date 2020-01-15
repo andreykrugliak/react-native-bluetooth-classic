@@ -36,7 +36,9 @@ RCT_EXTERN_METHOD(getConnectedDevice: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject)
 
 // Reading and writing
-RCT_EXTERN_METHOD(writeToDevice: (NSString)message
+RCT_EXTERN_METHOD(writeToDevice:
+                  (NSString)message
+                  deviceId: (NSString)deviceId
                   resolver: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject)
 

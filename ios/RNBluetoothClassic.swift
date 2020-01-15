@@ -416,9 +416,17 @@ class RNBluetoothClassic : RCTEventEmitter {
     @objc
     func writeToDevice(
         _ message: String,
+        deviceId: String,
         resolver resolve: RCTPromiseResolveBlock,
         rejecter reject: RCTPromiseRejectBlock
     ) -> Void {
+        
+        for accessory in eaManager.connectedAccessories {
+               if accessory.serialNumber == deviceId {
+                   peripheral = BluetoothDevice(accessory)
+               }
+           }
+        
         NSLog("(RNBluetoothClassic:writeToDevice) Writing %@ to device %@", message, peripheral?.accessory.name ?? "nil")
         if let currentDevice = peripheral, let decoded = Data(base64Encoded: message) {
             currentDevice.writeToDevice(String(data: decoded, encoding: .utf8)!)
