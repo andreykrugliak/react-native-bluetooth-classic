@@ -46,7 +46,9 @@ RCT_EXTERN_METHOD(readUntilDelimiter: (NSString)until
                   resolver: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(readFromDevice: (RCTPromiseResolveBlock)resolve
+RCT_EXTERN_METHOD(readFromDevice:
+                  (NSString)deviceId
+                  resolver: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject)
 
 RCT_EXTERN_METHOD(available: (RCTPromiseResolveBlock)resolve

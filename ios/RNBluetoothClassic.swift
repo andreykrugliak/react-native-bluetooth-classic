@@ -443,8 +443,14 @@ class RNBluetoothClassic : RCTEventEmitter {
      - parameter rejecter: reject if there are any issues
      */
     @objc
-    func readFromDevice(_ resolve: RCTPromiseResolveBlock,
+    func readFromDevice(_ deviceId: String, resolver resolve: RCTPromiseResolveBlock,
             rejecter reject: RCTPromiseRejectBlock) -> Void {
+
+        for accessory in eaManager.connectedAccessories {
+            if accessory.serialNumber == deviceId {
+                peripheral = BluetoothDevice(accessory)
+            }
+        }
         resolve(peripheral?.readFromDevice() ?? "")
     }
     
