@@ -107,6 +107,8 @@ RCT_EXTERN_METHOD(accept: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject)
 
 RCT_EXTERN_METHOD(cancelAccept: (RCTPromiseResolveBlock)resolve
-                  rejecter: (RCTPromiseRejectBlock)reject)                     
+                  rejecter: (RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(supportedEvents)
 
 @end
