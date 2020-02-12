@@ -29,10 +29,8 @@ import CoreBluetooth
  BluetoothDevice side.  This means that the responsiblity of converting and managing
  data is done in Javascript/client rather than in the module.
  */
-
 @objc(RNBluetoothClassic)
 class RNBluetoothClassic : RCTEventEmitter {
-    public static var shared:RNBluetoothClassic?
     
     let eaManager: EAAccessoryManager
     let cbCentral: CBCentralManager
@@ -57,11 +55,9 @@ class RNBluetoothClassic : RCTEventEmitter {
         self.encoding = .utf8
         self.readObserving = false;
         
-       
         super.init()
         
         self.registerForLocalNotifications()
-        RNBluetoothClassic.shared = self
     }
     
     /**
@@ -127,7 +123,6 @@ class RNBluetoothClassic : RCTEventEmitter {
         
         if let disconnected: EAAccessory = notification.userInfo!["EAAccessoryKey"] as? EAAccessory {
             device = BluetoothDevice(disconnected)
-            
             
             // If we are currently connected to this, then we need to
             // disconnected it and remove the current peripheral
@@ -359,11 +354,6 @@ class RNBluetoothClassic : RCTEventEmitter {
         resolver resolve: RCTPromiseResolveBlock,
         rejecter reject: RCTPromiseRejectBlock
     ) -> Void {
-        // First disconnect the current device if there was one selected
-//        if let toDisconnect = peripheral {
-//            toDisconnect.disconnect()
-//            peripheral = nil
-//        }
         
         // Now check to see that the device is still connected and available
         // using the EAAccessoryManager, if found we create a new BluetoothDevice
@@ -464,7 +454,6 @@ class RNBluetoothClassic : RCTEventEmitter {
         rejecter reject: RCTPromiseRejectBlock
     ) -> Void {
         NSLog("(RNBluetoothClassic:writeToDevice) Writing %@ to device %@", message, connectedPeripherals[deviceId]?.accessory.name ?? "nil")
-        print("This is the console output: \(connectedPeripherals as AnyObject)")
         if let currentDevice = connectedPeripherals[deviceId], let decoded = Data(base64Encoded: message) {
             currentDevice.writeToDevice(String(data: decoded, encoding: .utf8)!)
             resolve(true)
@@ -500,10 +489,8 @@ class RNBluetoothClassic : RCTEventEmitter {
         resolver resolve: RCTPromiseResolveBlock,
         rejecter reject: RCTPromiseRejectBlock
     ) -> Void {
-        if let currentDevice = connectedPeripherals[deviceId] {
-            resolve(readUntil(deviceId, currentDevice.delimiter) ?? delimiter)
-            return
-        }
+        let selfDelimiter = delimiter ?? connectedPeripherals[deviceId]?.delimiter
+        resolve(readUntil(deviceId, selfDelimiter))
     }
     
     /**
@@ -603,7 +590,7 @@ class RNBluetoothClassic : RCTEventEmitter {
      - parameter _: the delimiter to which we will read
      - returns: the read data String or nil
      */
-    private func readUntil(_ deviceId: String, _ delimiter: String) -> String? {
+    private func readUntil(_ deviceId: String, delimiter: String) -> String? {
         if let currentDevice = connectedPeripherals[deviceId] {
             return currentDevice.readFromDevice(withDelimiter: currentDevice.delimiter)
         }
