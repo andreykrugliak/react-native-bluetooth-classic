@@ -55,6 +55,9 @@ class BluetoothDevice: NSObject, StreamDelegate {
 
     var receivedDelegate:BluetoothDataReceivedDelegate?
     
+    var delimiter:String
+
+    
     /**
      Initialize the BluetoothDevice with an EAAccessory.
      
@@ -64,6 +67,7 @@ class BluetoothDevice: NSObject, StreamDelegate {
         self.accessory = accessory
         self.inBuffer = Data()
         self.outBuffer = Data()
+        self.delimiter = "\n"
     }
     
     /**

@@ -26,28 +26,42 @@ RCT_EXTERN_METHOD(connect: (NSString)deviceId
                   resolver: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(disconnect: (RCTPromiseResolveBlock)resolve
+RCT_EXTERN_METHOD(disconnect:
+                  (NSString)deviceId
+                  resolver: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(isConnected: (RCTPromiseResolveBlock)resolve
+RCT_EXTERN_METHOD(isConnected:
+                  (NSString)deviceId
+                  resolver: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(getConnectedDevice: (RCTPromiseResolveBlock)resolve
+RCT_EXTERN_METHOD(getConnectedDevice:
+                  (NSString)deviceId
+                  resolver: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject)
 
 // Reading and writing
-RCT_EXTERN_METHOD(writeToDevice: (NSString)message
+RCT_EXTERN_METHOD(writeToDevice:
+                  (NSString)deviceId
+                  message: (NSString)deviceId
                   resolver: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(readUntilDelimiter: (NSString)until
+RCT_EXTERN_METHOD(readUntilDelimiter:
+                  (NSString)deviceId
+                  delimiter: (NSString)until
                   resolver: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(readFromDevice: (RCTPromiseResolveBlock)resolve
+RCT_EXTERN_METHOD(readFromDevice:
+                  (NSString)deviceId
+                  resolver: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(available: (RCTPromiseResolveBlock)resolve
+RCT_EXTERN_METHOD(available:
+                  (NSString)deviceId
+                  resolver: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject)
 
 RCT_EXTERN_METHOD(setReadObserving: (BOOL)readObserving
@@ -55,10 +69,14 @@ RCT_EXTERN_METHOD(setReadObserving: (BOOL)readObserving
                   rejecter: (RCTPromiseRejectBlock)reject)
 
 // Helpers
-RCT_EXTERN_METHOD(clear: (RCTPromiseResolveBlock)resolve
+RCT_EXTERN_METHOD(clear:
+                  (NSString)deviceId
+                  resolver: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(setDelimiter: (NSString)delimiter
+RCT_EXTERN_METHOD(setDelimiter:
+                  (NSString)deviceId
+                  delimiter: (NSString)delimiter
                   resolver: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject)
 
@@ -89,6 +107,8 @@ RCT_EXTERN_METHOD(accept: (RCTPromiseResolveBlock)resolve
                   rejecter: (RCTPromiseRejectBlock)reject)
 
 RCT_EXTERN_METHOD(cancelAccept: (RCTPromiseResolveBlock)resolve
-                  rejecter: (RCTPromiseRejectBlock)reject)                     
+                  rejecter: (RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(supportedEvents)
 
 @end
