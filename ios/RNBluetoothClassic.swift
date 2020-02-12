@@ -29,8 +29,10 @@ import CoreBluetooth
  BluetoothDevice side.  This means that the responsiblity of converting and managing
  data is done in Javascript/client rather than in the module.
  */
+
 @objc(RNBluetoothClassic)
 class RNBluetoothClassic : RCTEventEmitter {
+    public static var shared:RNBluetoothClassic?
     
     let eaManager: EAAccessoryManager
     let cbCentral: CBCentralManager
@@ -38,7 +40,7 @@ class RNBluetoothClassic : RCTEventEmitter {
     let supportedProtocols: [String]
     
     var peripheral:BluetoothDevice?
-    var delimiter:String
+    private var connectedPeripherals = Dictionary<String, BluetoothDevice>()
     var encoding:String.Encoding
     var readObserving:Bool
     
@@ -52,13 +54,14 @@ class RNBluetoothClassic : RCTEventEmitter {
         self.supportedProtocols = Bundle.main
             .object(forInfoDictionaryKey: "UISupportedExternalAccessoryProtocols") as! [String]
         
-        self.delimiter = "\n"
         self.encoding = .utf8
         self.readObserving = false;
         
+       
         super.init()
         
         self.registerForLocalNotifications()
+        RNBluetoothClassic.shared = self
     }
     
     /**
@@ -67,7 +70,6 @@ class RNBluetoothClassic : RCTEventEmitter {
     convenience init(delimiter:String, encoding:String.Encoding) {
         self.init()
         
-        self.delimiter = delimiter
         self.encoding = encoding
     }
     
@@ -126,12 +128,13 @@ class RNBluetoothClassic : RCTEventEmitter {
         if let disconnected: EAAccessory = notification.userInfo!["EAAccessoryKey"] as? EAAccessory {
             device = BluetoothDevice(disconnected)
             
+            
             // If we are currently connected to this, then we need to
             // disconnected it and remove the current peripheral
-            if let currentDevice = peripheral {
+            if let currentDevice = connectedPeripherals[device.accessory.serialNumber] {
                 if currentDevice.accessory.serialNumber == disconnected.serialNumber {
                     currentDevice.disconnect()
-                    peripheral = nil
+                    connectedPeripherals[device.accessory.serialNumber] = nil
                 }
             }
             
@@ -357,29 +360,29 @@ class RNBluetoothClassic : RCTEventEmitter {
         rejecter reject: RCTPromiseRejectBlock
     ) -> Void {
         // First disconnect the current device if there was one selected
-        if let toDisconnect = peripheral {
-            toDisconnect.disconnect()
-            peripheral = nil
-        }
+//        if let toDisconnect = peripheral {
+//            toDisconnect.disconnect()
+//            peripheral = nil
+//        }
         
         // Now check to see that the device is still connected and available
         // using the EAAccessoryManager, if found we create a new BluetoothDevice
         // which will be responsible for managing our connection
         for accessory in eaManager.connectedAccessories {
             if accessory.serialNumber == deviceId {
-                peripheral = BluetoothDevice(accessory)
-                peripheral!.receivedDelegate = self
+                connectedPeripherals[deviceId] = BluetoothDevice(accessory)
+                connectedPeripherals[deviceId]!.receivedDelegate = self
                 break
             }
         }
         
-        if let toConnect:BluetoothDevice = peripheral {
+        if let toConnect:BluetoothDevice = connectedPeripherals[deviceId] {
             // Determine the protocol to use, this is done by getting a list of the available
             // protocols from plist and selecting the first one matching the device.
             if let protocolString:String = determineProtocolString(forDevice: toConnect) {
                 NSLog("(RNBluetoothClassic:connect) Connecting to %@ with %@", toConnect.accessory.name, protocolString)
                 toConnect.connect(protocolString: protocolString)
-                resolve(peripheral?.asDictionary())
+                resolve(connectedPeripherals[deviceId]?.asDictionary())
             }
         } else {
             reject("error", "Unable to connect to device", nil)
@@ -402,13 +405,14 @@ class RNBluetoothClassic : RCTEventEmitter {
      */
     @objc
     func disconnect(
-        _ resolve: RCTPromiseResolveBlock,
+        _ deviceId: String,
+        resolver resolve: RCTPromiseResolveBlock,
         rejecter reject: RCTPromiseRejectBlock
     ) -> Void {
-        if let toDisconnect = peripheral {
+        if let toDisconnect = connectedPeripherals[deviceId] {
             NSLog("(RNBluetoothClassic:disconnect) Disconnecting %@", toDisconnect.accessory.name)
             toDisconnect.disconnect()
-            peripheral = nil
+            connectedPeripherals[deviceId] = nil
         }
         resolve(true)
     }
@@ -418,10 +422,11 @@ class RNBluetoothClassic : RCTEventEmitter {
      - parameter _: resolve the connection
      */
     @objc
-    func isConnected(_ resolve: RCTPromiseResolveBlock,
-                     rejecter reject: RCTPromiseRejectBlock) -> Void {
-        NSLog("(RNBluetoothClassic:isConnected) isConnected %@", peripheral?.accessory.name ?? "nil")
-        if let connected = peripheral {
+    func isConnected(_ deviceId: String,
+    resolver resolve: RCTPromiseResolveBlock,
+    rejecter reject: RCTPromiseRejectBlock) -> Void {
+        NSLog("(RNBluetoothClassic:isConnected) isConnected %@", connectedPeripherals[deviceId]?.accessory.name ?? "nil")
+        if let connected = connectedPeripherals[deviceId] {
             resolve(connected.accessory.isConnected)
         } else {
             resolve(false)
@@ -434,11 +439,12 @@ class RNBluetoothClassic : RCTEventEmitter {
      */
     @objc
     func getConnectedDevice(
-        _ resolve: RCTPromiseResolveBlock,
+        _ deviceId: String,
+        resolver resolve: RCTPromiseResolveBlock,
         rejecter reject: RCTPromiseRejectBlock) -> Void {
-        NSLog("(RNBluetoothClassic:getConnectedDevice) Determine whether %@ is connected", peripheral?.accessory.name ?? "nil")
-        if peripheral != nil {
-            resolve(peripheral?.asDictionary())
+        NSLog("(RNBluetoothClassic:getConnectedDevice) Determine whether %@ is connected", connectedPeripherals[deviceId]?.accessory.name ?? "nil")
+        if connectedPeripherals[deviceId] != nil {
+            resolve(connectedPeripherals[deviceId]?.asDictionary())
         } else {
             reject("error", "No bluetooth device connected", nil)
         }
@@ -452,12 +458,14 @@ class RNBluetoothClassic : RCTEventEmitter {
      */
     @objc
     func writeToDevice(
-        _ message: String,
+        _ deviceId: String,
+        message: String,
         resolver resolve: RCTPromiseResolveBlock,
         rejecter reject: RCTPromiseRejectBlock
     ) -> Void {
-        NSLog("(RNBluetoothClassic:writeToDevice) Writing %@ to device %@", message, peripheral?.accessory.name ?? "nil")
-        if let currentDevice = peripheral, let decoded = Data(base64Encoded: message) {
+        NSLog("(RNBluetoothClassic:writeToDevice) Writing %@ to device %@", message, connectedPeripherals[deviceId]?.accessory.name ?? "nil")
+        print("This is the console output: \(connectedPeripherals as AnyObject)")
+        if let currentDevice = connectedPeripherals[deviceId], let decoded = Data(base64Encoded: message) {
             currentDevice.writeToDevice(String(data: decoded, encoding: .utf8)!)
             resolve(true)
         } else {
@@ -472,9 +480,10 @@ class RNBluetoothClassic : RCTEventEmitter {
      - parameter rejecter: reject if there are any issues
      */
     @objc
-    func readFromDevice(_ resolve: RCTPromiseResolveBlock,
-            rejecter reject: RCTPromiseRejectBlock) -> Void {
-        resolve(peripheral?.readFromDevice() ?? "")
+    func readFromDevice(_ deviceId: String,
+           resolver resolve: RCTPromiseResolveBlock,
+           rejecter reject: RCTPromiseRejectBlock) -> Void {
+        resolve(connectedPeripherals[deviceId]?.readFromDevice() ?? "")
     }
     
     /**
@@ -486,11 +495,15 @@ class RNBluetoothClassic : RCTEventEmitter {
      */
     @objc
     func readUntilDelmiter(
-        _ delimiter: String,
+        _ deviceId: String,
+        delimiter: String,
         resolver resolve: RCTPromiseResolveBlock,
         rejecter reject: RCTPromiseRejectBlock
     ) -> Void {
-        resolve(readUntil(delimiter))
+        if let currentDevice = connectedPeripherals[deviceId] {
+            resolve(readUntil(deviceId, currentDevice.delimiter) ?? delimiter)
+            return
+        }
     }
     
     /**
@@ -501,11 +514,12 @@ class RNBluetoothClassic : RCTEventEmitter {
      */
     @objc
     func setDelimiter(
-        _ delimiter: String,
+        _ deviceId: String,
+        delimiter: String,
         resolver resolve: RCTPromiseResolveBlock,
         rejecter reject: RCTPromiseRejectBlock
     ) -> Void {
-        self.delimiter = delimiter
+        connectedPeripherals[deviceId]?.delimiter = delimiter
         resolve(true)
     }
     
@@ -526,9 +540,9 @@ class RNBluetoothClassic : RCTEventEmitter {
     @objc
     func clear(_ resolve: RCTPromiseResolveBlock,
                rejecter reject: RCTPromiseRejectBlock) {
-        if let currentDevice = peripheral {
-            currentDevice.clear()
-        }
+//        if let currentDevice = peripheral {
+//            currentDevice.clear()
+//        }
         resolve(true)
     }
     
@@ -540,9 +554,10 @@ class RNBluetoothClassic : RCTEventEmitter {
      - parameter rejecter: reject if there there is no data available
      */
     @objc
-    func available(_ resolve: RCTPromiseResolveBlock,
-                rejecter reject: RCTPromiseRejectBlock) {
-        guard let p = peripheral else {
+    func available(_ deviceId: String,
+                    resolver resolve: RCTPromiseResolveBlock,
+                    rejecter reject: RCTPromiseRejectBlock) {
+        guard let p = connectedPeripherals[deviceId] else {
             let msg: String = "There is no currently connected devices from which to read data"
             reject("error", msg, nil)
             return
@@ -588,9 +603,9 @@ class RNBluetoothClassic : RCTEventEmitter {
      - parameter _: the delimiter to which we will read
      - returns: the read data String or nil
      */
-    private func readUntil(_ delimiter: String) -> String? {
-        if let currentDevice = peripheral {
-            return currentDevice.readFromDevice(withDelimiter: delimiter)
+    private func readUntil(_ deviceId: String, _ delimiter: String) -> String? {
+        if let currentDevice = connectedPeripherals[deviceId] {
+            return currentDevice.readFromDevice(withDelimiter: currentDevice.delimiter)
         }
         
         return nil
@@ -613,7 +628,7 @@ extension RNBluetoothClassic : BluetoothDataReceivedDelegate {
         
         // There are Read Listeners, we can send the request.
         if let data = String(data: receivedData, encoding: encoding) {
-            let indexes = data.indexes(of: delimiter)
+            let indexes = data.indexes(of: fromDevice.delimiter)
             var startIndex = data.startIndex
             
             for index in indexes {
@@ -630,7 +645,7 @@ extension RNBluetoothClassic : BluetoothDataReceivedDelegate {
         } else {
             // Attempting to parse data using current encoding failed
             let userInfo:[String:Any] = [
-                "device": peripheral?.asDictionary() as Any,
+                "device": connectedPeripherals[fromDevice.accessory.serialNumber]?.asDictionary() as Any,
                 "error": "Failed to parse data with encoding \(encoding.description)",
                 "message": "Failed to parse data with encoding \(encoding.description)"
             ]
